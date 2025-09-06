@@ -167,50 +167,7 @@ h2{margin-top:0}
       </div>
 
       <!-- control panels -->
-      <div class="side-panels">
-        <div class="panel">
-          <h3>1) Alice — bits & bases</h3>
-          <div class="small">Number of qubits, choose bits & bases (or randomize)</div>
-          <div style="margin-top:8px">
-            <label class="small">Count:
-              <select id="numQ" style="margin-left:8px">
-                <option>6</option><option selected>8</option><option>10</option><option>12</option>
-              </select>
-            </label>
-            <button id="randBtn" class="btn secondary" style="margin-left:8px">Randomize</button>
-          </div>
-          <div id="alicePickers" class="qubit-row" style="margin-top:10px"></div>
-          <div style="margin-top:10px">
-            <button id="prepareBtn" class="btn">Prepare</button>
-            <button id="sendBtn" class="btn secondary">Send Qubits</button>
-          </div>
-          <div id="aliceNote" class="note"></div>
-        </div>
-
-        <div class="panel">
-          <h3>2) Bob — measure</h3>
-          <div class="small">After photons arrive, measure each qubit</div>
-          <div id="bobArea" style="margin-top:8px"></div>
-          <div style="margin-top:8px">
-            <button id="siftBtn" class="btn secondary">Sift & Reveal Key</button>
-          </div>
-          <div id="mismatchInfo" class="note"></div>
-        </div>
-
-        <div class="panel">
-          <h3>3) Encrypt & Send</h3>
-          <div class="small">After key is ready, encrypt a message and send</div>
-          <input id="plaintext" placeholder="Message to encrypt" style="width:100%;margin-top:8px;padding:8px;border-radius:6px;border:none;background:rgba(255,255,255,0.02)"/>
-          <div style="margin-top:8px">
-            <button id="encryptBtn" class="btn" disabled>Encrypt & Send</button>
-          </div>
-          <div id="cipherBox" class="note" style="margin-top:8px;display:none"></div>
-          <div id="sharedKeyBox" style="margin-top:12px"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+      
 
 <!-- How it works modal -->
 <div id="modal" class="modal-back" role="dialog" aria-hidden="true">
