@@ -6,8 +6,8 @@
 <title>QKD Packet-Tracer Style Simulator — BB84</title>
 <style>
 :root{
-  --bg1:#051025; --bg2:#071226;
-  --accent1:#06b6d4; --accent2:#8b5cf6; --danger:#ef4444;
+  --bg1:#0a2714; --bg2:#082211;
+  --accent1:#10b981; --accent2:#22d3ee; --danger:#ef4444;
   --glass: rgba(255,255,255,0.03);
 }
 *{box-sizing:border-box;font-family:Inter,Segoe UI,system-ui,Arial,sans-serif}
@@ -72,8 +72,8 @@ h2{margin-top:0}
 /* speech */
 .speech{position:absolute;padding:8px 12px;border-radius:12px;background:rgba(0,0,0,0.55);color:white;font-size:13px;max-width:300px;opacity:0;transform:translateY(6px);transition:all .36s}
 .speech.show{opacity:1;transform:translateY(0)}
-.speech.alice{left:18px;top:8px;background:linear-gradient(90deg,var(--accent1),var(--accent2))}
-.speech.bob{right:18px;top:8px;background:linear-gradient(90deg,#10b981,#06b6d4)}
+.speech.Sender{left:18px;top:8px;background:linear-gradient(90deg,var(--accent1),var(--accent2))}
+.speech.Receiver{right:18px;top:8px;background:linear-gradient(90deg,#10b981,#06b6d4)}
 .speech.eve{left:50%;transform:translateX(-50%);top:8px;background:linear-gradient(90deg,#ef4444,#fb923c)}
 
 /* small note */
@@ -96,19 +96,19 @@ h2{margin-top:0}
     <div class="toolbox">
       <div class="small">Drag components to the canvas (or click Fiber then nodes to connect)</div>
 
-      <div id="toolAlice" class="tool" draggable="true" data-tool="alice">
-        <div class="emoji">👩</div>
-        <div><div style="font-weight:700">Alice</div><div class="small">Sender</div></div>
+      <div id="toolSender" class="tool" draggable="true" data-tool="Sender">
+        <div class="emoji">🖥️</div>
+        <div><div style="font-weight:700">Sender</div><div class="small"></div></div>
       </div>
 
-      <div id="toolBob" class="tool" draggable="true" data-tool="bob">
-        <div class="emoji">🧑</div>
-        <div><div style="font-weight:700">Bob</div><div class="small">Receiver</div></div>
+      <div id="toolReceiver" class="tool" draggable="true" data-tool="Receiver">
+        <div class="emoji">💻</div>
+        <div><div style="font-weight:700">Receiver</div><div class="small"></div></div>
       </div>
 
       <div id="toolEve" class="tool" draggable="true" data-tool="eve">
         <div class="emoji">🕵️</div>
-        <div><div style="font-weight:700">Eve</div><div class="small">Eavesdropper</div></div>
+        <div><div style="font-weight:700">Eve</div><div class="small">Intruder</div></div>
       </div>
 
       <div id="toolFiber" class="tool" draggable="true" data-tool="fiber">
@@ -133,8 +133,8 @@ h2{margin-top:0}
       <div class="note">
         <strong>Quick steps</strong>
         <ol style="padding-left:18px;margin-top:6px">
-          <li>Drag Alice & Bob to the canvas</li>
-          <li>Drag Fiber then click Alice → Bob to connect</li>
+          <li>Drag Sender & Receiver to the canvas</li>
+          <li>Drag Fiber then click Sender → Receiver to connect</li>
           <li>Place Eve on or near the fiber to intercept</li>
           <li>Prepare bits/bases, Send Qubits, Measure, Sift, Encrypt</li>
         </ol>
@@ -154,8 +154,8 @@ h2{margin-top:0}
         <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
 
         <!-- speech bubbles -->
-        <div id="speechAlice" class="speech alice">Place Alice</div>
-        <div id="speechBob" class="speech bob">Place Bob</div>
+        <div id="speechSender" class="speech Sender">Place Sender</div>
+        <div id="speechReceiver" class="speech Receiver">Place Receiver</div>
         <div id="speechEve" class="speech eve">Place Eve</div>
       </div>
 
@@ -183,10 +183,10 @@ h2{margin-top:0}
     </p>
     <h3>Protocol Steps (this simulator)</h3>
     <ol>
-      <li>Alice prepares qubits: each qubit = (bit, basis) and sends photons over the fiber.</li>
-      <li>Bob measures each photon with a random basis. If his basis = Alice's basis → correct bit; else random.</li>
-      <li>Alice & Bob publicly compare bases (not bits) and keep positions with matching bases → sifted key.</li>
-      <li>If Eve intercepts and resends, she introduces errors in matched positions — detectable by Alice/Bob.</li>
+      <li>Sender prepares qubits: each qubit = (bit, basis) and sends photons over the fiber.</li>
+      <li>Receiver measures each photon with a random basis. If his basis = Sender's basis → correct bit; else random.</li>
+      <li>Sender & Receiver publicly compare bases (not bits) and keep positions with matching bases → sifted key.</li>
+      <li>If Eve intercepts and resends, she introduces errors in matched positions — detectable by Sender/Receiver.</li>
       <li>The sifted key is used to derive an encryption key (this demo uses a SHA-256 → AES-GCM approach for clarity).</li>
     </ol>
     <div style="text-align:right;margin-top:12px"><button id="closeModal" class="btn">Close</button></div>
@@ -209,13 +209,13 @@ let connectStart = null;
 let dragging = null;
 let dragOffset = {x:0,y:0};
 
-let aliceBits = [], aliceBases = [], bobChoices = [], bobResults = [], perPhotonEve = [];
+let SenderBits = [], SenderBases = [], ReceiverChoices = [], ReceiverResults = [], perPhotonEve = [];
 let photonsInFlight = 0;
 let derivedKey = null;
 
 /* UI refs */
-const speechAlice = document.getElementById('speechAlice');
-const speechBob   = document.getElementById('speechBob');
+const speechSender = document.getElementById('speechSender');
+const speechReceiver   = document.getElementById('speechReceiver');
 const speechEve   = document.getElementById('speechEve');
 
 function $(id){ return document.getElementById(id); }
@@ -224,12 +224,12 @@ function randBasis(){ return Math.random() < 0.5 ? '+' : 'x' }
 
 /* show bubble */
 function showBubble(who,text){
-  const el = who==='Alice' ? speechAlice : who==='Bob' ? speechBob : speechEve;
+  const el = who==='Sender' ? speechSender : who==='Receiver' ? speechReceiver : speechEve;
   el.innerText = text; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2200);
 }
 
 /* TOOL: make toolbox items draggable onto workspace */
-['toolAlice','toolBob','toolEve','toolFiber','toolMsg'].forEach(id=>{
+['toolSender','toolReceiver','toolEve','toolFiber','toolMsg'].forEach(id=>{
   const t = document.getElementById(id);
   t.addEventListener('dragstart', e => { e.dataTransfer.setData('tool', id); });
 });
@@ -245,11 +245,11 @@ workspace.addEventListener('drop', e=>{
   const y = e.clientY - rect.top - 60;
   if (tool === 'toolFiber'){
     connectMode = true; connectStart = null;
-    showBubble('Alice','Connect mode: click node A then node B to create fiber');
+    showBubble('Sender','Connect mode: click node A then node B to create fiber');
     return;
   }
-  if (tool === 'toolAlice') createNode('alice', x, y);
-  if (tool === 'toolBob')   createNode('bob',   x, y);
+  if (tool === 'toolSender') createNode('Sender', x, y);
+  if (tool === 'toolReceiver')   createNode('Receiver',   x, y);
   if (tool === 'toolEve')   createNode('eve',   x, y);
   if (tool === 'toolMsg')   createNode('message', x, y);
 });
@@ -260,7 +260,7 @@ function createNode(type,x=120,y=80){
   const el = document.createElement('div'); el.className='node'; el.id='node-'+id;
   el.dataset.id = id; el.dataset.type = type;
   el.style.left = x+'px'; el.style.top = y+'px';
-  const emoji = type==='alice' ? '👩' : type==='bob' ? '🧑' : type==='eve' ? '🕵️' : '✉️';
+  const emoji = type==='Sender' ? '🖥️' : type==='Receiver' ? '🖥️' : type==='eve' ? '🕵️' : '✉️';
   el.innerHTML = `<div class="avatar">${emoji}</div><div class="label">${type.toUpperCase()}</div>`;
   workspace.appendChild(el);
   nodes.push({id,type,el,x,y});
@@ -294,15 +294,15 @@ window.addEventListener('pointerup', e=>{ if (dragging){ dragging.style.cursor='
 /* node click: for connect mode or normal select */
 function nodeClicked(id){
   if (connectMode){
-    if (!connectStart){ connectStart = id; const nd = nodes.find(n=>n.id===id); nd.el.style.outline='2px solid rgba(14,165,233,0.9)'; showBubble('Alice','Now click the node to connect to'); return; }
-    if (connectStart === id){ showBubble('Alice','Cannot connect node to itself'); connectStart=null; connectMode=false; cleanupOutlines(); return; }
+    if (!connectStart){ connectStart = id; const nd = nodes.find(n=>n.id===id); nd.el.style.outline='2px solid rgba(14,165,233,0.9)'; showBubble('Sender','Now click the node to connect to'); return; }
+    if (connectStart === id){ showBubble('Sender','Cannot connect node to itself'); connectStart=null; connectMode=false; cleanupOutlines(); return; }
     createCable(connectStart, id);
     connectMode = false; cleanupOutlines();
-    showBubble('Alice','Fiber connected');
+    showBubble('Sender','Fiber connected');
     return;
   }
   const nd = nodes.find(n=>n.id===id);
-  if (nd) showBubble(nd.type==='alice'?'Alice':nd.type==='bob'?'Bob':'Eve', `${nd.type.toUpperCase()} selected`);
+  if (nd) showBubble(nd.type==='Sender'?'Sender':nd.type==='Receiver'?'Receiver':'Eve', `${nd.type.toUpperCase()} selected`);
 }
 function cleanupOutlines(){ nodes.forEach(n=> n.el.style.outline='none'); }
 
@@ -365,16 +365,16 @@ function isNodeNearPath(node, pathEl){
 }
 
 /* -------------------------
-   Alice UI: pickers
+   Sender UI: pickers
    ------------------------- */
-function buildAlicePickers(){
+function buildSenderPickers(){
   const n = parseInt($('numQ').value,10);
-  aliceBits = new Array(n).fill(0);
-  aliceBases = new Array(n).fill('+');
+  SenderBits = new Array(n).fill(0);
+  SenderBases = new Array(n).fill('+');
   perPhotonEve = new Array(n).fill(null);
-  bobChoices = new Array(n).fill(null);
-  bobResults = new Array(n).fill(null);
-  const container = $('alicePickers'); container.innerHTML='';
+  ReceiverChoices = new Array(n).fill(null);
+  ReceiverResults = new Array(n).fill(null);
+  const container = $('SenderPickers'); container.innerHTML='';
   for (let i=0;i<n;i++){
     const div = document.createElement('div'); div.className='qubit-picker';
     div.innerHTML = `<div style="font-weight:700">Q${i+1}</div>
@@ -384,14 +384,14 @@ function buildAlicePickers(){
       <select id="abase-${i}"><option value="+">+</option><option value="x">x</option></select>`;
     container.appendChild(div);
   }
-  $('bobArea').innerHTML=''; $('cipherBox').style.display='none'; $('sharedKeyBox').innerHTML=''; $('mismatchInfo').innerText='';
+  $('ReceiverArea').innerHTML=''; $('cipherBox').style.display='none'; $('sharedKeyBox').innerHTML=''; $('mismatchInfo').innerText='';
   $('encryptBtn').disabled = true;
-  $('aliceNote').innerText = 'Prepared — set bits & bases or Randomize.';
+  $('SenderNote').innerText = 'Prepared — set bits & bases or Randomize.';
 }
-$('prepareBtn').addEventListener('click', buildAlicePickers);
-$('numQ').addEventListener('change', buildAlicePickers);
+$('prepareBtn').addEventListener('click', buildSenderPickers);
+$('numQ').addEventListener('change', buildSenderPickers);
 $('randBtn').addEventListener('click', ()=>{
-  buildAlicePickers();
+  buildSenderPickers();
   const n = parseInt($('numQ').value,10);
   for (let i=0;i<n;i++){ $('abit-'+i).value = randBit(); $('abase-'+i).value = randBasis(); }
 });
@@ -400,42 +400,42 @@ $('randBtn').addEventListener('click', ()=>{
    Send photons (animated along path)
    ------------------------- */
 $('sendBtn').addEventListener('click', ()=>{
-  const alice = nodes.find(n=>n.type==='alice'), bob = nodes.find(n=>n.type==='bob');
-  if (!alice || !bob){ alert('Place Alice and Bob on the canvas'); return; }
-  const route = findRoute(alice, bob);
-  if (!route){ alert('Connect Alice and Bob using Fiber (or connect via Eve)'); return; }
+  const Sender = nodes.find(n=>n.type==='Sender'), Receiver = nodes.find(n=>n.type==='Receiver');
+  if (!Sender || !Receiver){ alert('Place Sender and Receiver on the canvas'); return; }
+  const route = findRoute(Sender, Receiver);
+  if (!route){ alert('Connect Sender and Receiver using Fiber (or connect via Eve)'); return; }
   // read inputs
   const n = parseInt($('numQ').value,10);
-  aliceBits = new Array(n); aliceBases = new Array(n);
-  for (let i=0;i<n;i++){ aliceBits[i] = parseInt($('abit-'+i).value,10); aliceBases[i] = $('abase-'+i).value; }
-  bobChoices = new Array(n).fill(null); bobResults = new Array(n).fill(null); perPhotonEve = new Array(n).fill(null);
+  SenderBits = new Array(n); SenderBases = new Array(n);
+  for (let i=0;i<n;i++){ SenderBits[i] = parseInt($('abit-'+i).value,10); SenderBases[i] = $('abase-'+i).value; }
+  ReceiverChoices = new Array(n).fill(null); ReceiverResults = new Array(n).fill(null); perPhotonEve = new Array(n).fill(null);
   photonsInFlight = n;
-  $('bobArea').innerHTML=''; $('cipherBox').style.display='none'; $('sharedKeyBox').innerHTML=''; $('mismatchInfo').innerText='';
-  showBubble('Alice','Sending photons...');
+  $('ReceiverArea').innerHTML=''; $('cipherBox').style.display='none'; $('sharedKeyBox').innerHTML=''; $('mismatchInfo').innerText='';
+  showBubble('Sender','Sending photons...');
   const delay = 140;
   for (let i=0;i<n;i++){ ((idx)=> setTimeout(()=> sendPhoton(idx, route), idx*delay))(i); }
 });
 
-/* find route array of nodes between Alice and Bob (uses cables if present) */
-function findRoute(alice,bob){
+/* find route array of nodes between Sender and Receiver (uses cables if present) */
+function findRoute(Sender,Receiver){
   // direct cable?
-  const direct = cables.find(c=> (c.fromId===alice.id && c.toId===bob.id) || (c.fromId===bob.id && c.toId===alice.id));
-  if (direct) return [alice,bob];
+  const direct = cables.find(c=> (c.fromId===Sender.id && c.toId===Receiver.id) || (c.fromId===Receiver.id && c.toId===Sender.id));
+  if (direct) return [Sender,Receiver];
   // via Eve if connected both sides and enabled
   const eve = nodes.find(n=>n.type==='eve');
   if (eve && $('toggleEve').checked){
-    const c1 = cables.find(c=> (c.fromId===alice.id && c.toId===eve.id) || (c.fromId===eve.id && c.toId===alice.id));
-    const c2 = cables.find(c=> (c.fromId===bob.id && c.toId===eve.id) || (c.fromId===eve.id && c.toId===bob.id));
-    if (c1 && c2) return [alice,eve,bob];
+    const c1 = cables.find(c=> (c.fromId===Sender.id && c.toId===eve.id) || (c.fromId===eve.id && c.toId===Sender.id));
+    const c2 = cables.find(c=> (c.fromId===Receiver.id && c.toId===eve.id) || (c.fromId===eve.id && c.toId===Receiver.id));
+    if (c1 && c2) return [Sender,eve,Receiver];
   }
   // BFS on cable graph
   const graph = {};
   nodes.forEach(n=> graph[n.id]=[]);
   cables.forEach(c=> { graph[c.fromId].push(c.toId); graph[c.toId].push(c.fromId); });
-  const q = [[alice.id]]; const visited = new Set([alice.id]);
+  const q = [[Sender.id]]; const visited = new Set([Sender.id]);
   while(q.length){
     const path = q.shift(), last = path[path.length-1];
-    if (last === bob.id) return path.map(id=> nodes.find(n=>n.id===id));
+    if (last === Receiver.id) return path.map(id=> nodes.find(n=>n.id===id));
     for (const nb of graph[last] || []) if (!visited.has(nb)) { visited.add(nb); q.push([...path, nb]); }
   }
   return null;
@@ -456,7 +456,7 @@ function sendPhoton(index, route){
 
   // create photon element
   const p = document.createElement('div'); p.className='photon';
-  const badge = document.createElement('div'); badge.className='basis'; badge.textContent = aliceBases[index];
+  const badge = document.createElement('div'); badge.className='basis'; badge.textContent = SenderBases[index];
   p.appendChild(badge);
   document.body.appendChild(p);
 
@@ -484,7 +484,7 @@ function sendPhoton(index, route){
         if (arrivedNode && arrivedNode.type === 'eve' && $('toggleEve').checked){
           // Eve measures with random basis then determines resent bit
           const eveBasis = randBasis();
-          const eveMeasured = (eveBasis === aliceBases[index]) ? aliceBits[index] : randBit();
+          const eveMeasured = (eveBasis === SenderBases[index]) ? SenderBits[index] : randBit();
           perPhotonEve[index] = {eveBasis, resentBit: eveMeasured, intercepted:true};
           showBubble('Eve', `Intercepted Q${index+1} — measured ${eveBasis}`);
           placeTransient(arrivedNode, `E:${eveMeasured}`);
@@ -507,10 +507,10 @@ function sendPhoton(index, route){
 
   function finishAtReceiver(){
     if (badge) badge.remove();
-    const txt = document.createElement('div'); txt.textContent = aliceBits[index];
+    const txt = document.createElement('div'); txt.textContent = SenderBits[index];
     p.appendChild(txt);
     animateReceiverPulse(route[route.length-1]);
-    setTimeout(()=>{ p.remove(); photonsInFlight--; if (photonsInFlight===0) { showBubble('Bob','All photons arrived — measure them'); buildBobUI(); } }, 600);
+    setTimeout(()=>{ p.remove(); photonsInFlight--; if (photonsInFlight===0) { showBubble('Receiver','All photons arrived — measure them'); buildReceiverUI(); } }, 600);
   }
 
   // start animation on first path
@@ -538,11 +538,11 @@ function animateReceiverPulse(node){
 }
 
 /* -------------------------
-   Bob UI & measurement
+   Receiver UI & measurement
    ------------------------- */
-function buildBobUI(){
-  const area = $('bobArea'); area.innerHTML='';
-  for (let i=0;i<aliceBits.length;i++){
+function buildReceiverUI(){
+  const area = $('ReceiverArea'); area.innerHTML='';
+  for (let i=0;i<SenderBits.length;i++){
     const card = document.createElement('div'); card.className='measure-card'; card.id='m-'+i; card.style.marginBottom='8px';
     card.innerHTML = `<div style="font-weight:700">Q${i+1}</div>
       <div class="small" style="margin-top:6px">Choose basis</div>
@@ -557,38 +557,38 @@ function buildBobUI(){
 
 /* measurement logic (uses perPhotonEve if intercepted) */
 function userMeasure(index, basis){
-  if (bobChoices[index] !== null) return;
-  bobChoices[index] = basis;
+  if (ReceiverChoices[index] !== null) return;
+  ReceiverChoices[index] = basis;
   const eveRec = perPhotonEve[index];
   if (eveRec && eveRec.intercepted){
-    if (basis === aliceBases[index]) bobResults[index] = eveRec.resentBit;
-    else bobResults[index] = randBit();
+    if (basis === SenderBases[index]) ReceiverResults[index] = eveRec.resentBit;
+    else ReceiverResults[index] = randBit();
   } else {
-    if (basis === aliceBases[index]) bobResults[index] = aliceBits[index];
-    else bobResults[index] = randBit();
+    if (basis === SenderBases[index]) ReceiverResults[index] = SenderBits[index];
+    else ReceiverResults[index] = randBit();
   }
-  $('res-'+index).innerText = `Basis ${basis} → Bit ${bobResults[index]}`;
-  showBubble('Bob', `Measured Q${index+1}`);
+  $('res-'+index).innerText = `Basis ${basis} → Bit ${ReceiverResults[index]}`;
+  showBubble('Receiver', `Measured Q${index+1}`);
 }
 
 /* -------------------------
    Sift & Key derivation
    ------------------------- */
 $('siftBtn').addEventListener('click', async ()=>{
-  if (!aliceBits.length){ alert('No qubits sent yet'); return; }
-  if (bobChoices.some(v=> v===null)){ alert('Please measure all qubits before sifting'); return; }
+  if (!SenderBits.length){ alert('No qubits sent yet'); return; }
+  if (ReceiverChoices.some(v=> v===null)){ alert('Please measure all qubits before sifting'); return; }
   const keyBits = [], mismatches = [];
-  for (let i=0;i<aliceBits.length;i++){
-    if (aliceBases[i] === bobChoices[i]){
-      keyBits.push(aliceBits[i]);
-      if (bobResults[i] !== aliceBits[i]) mismatches.push(i);
+  for (let i=0;i<SenderBits.length;i++){
+    if (SenderBases[i] === ReceiverChoices[i]){
+      keyBits.push(SenderBits[i]);
+      if (ReceiverResults[i] !== SenderBits[i]) mismatches.push(i);
     }
   }
   const keyBox = $('sharedKeyBox'); keyBox.innerHTML='';
   if (keyBits.length === 0) keyBox.innerHTML = `<div class="final-key">No shared key (no matching bases)</div>`;
   else {
     keyBox.innerHTML = `<div class="final-key">🔑 ${keyBits.join('')}</div>`;
-    showBubble('Alice','Shared key established!');
+    showBubble('Sender','Shared key established!');
     derivedKey = await deriveAesKeyFromBits(keyBits);
     $('encryptBtn').disabled = false;
   }
@@ -620,14 +620,14 @@ $('encryptBtn').addEventListener('click', async ()=>{
   const hex = bufferToHex(ciphertext);
   $('cipherBox').style.display='block'; $('cipherBox').innerHTML = `<div style="font-weight:700">Ciphertext (hex)</div><div style="margin-top:8px;font-family:monospace">${hex}</div>`;
   // animate ciphertext along route (same route as qubits)
-  const alice = nodes.find(n=>n.type==='alice'), bob = nodes.find(n=>n.type==='bob');
-  const route = findRoute(alice,bob);
-  if (!route){ alert('No route between Alice and Bob'); return; }
+  const Sender = nodes.find(n=>n.type==='Sender'), Receiver = nodes.find(n=>n.type==='Receiver');
+  const route = findRoute(Sender,Receiver);
+  if (!route){ alert('No route between Sender and Receiver'); return; }
   animateCipher(route, hex, async ()=>{
     try {
       const decrypted = await crypto.subtle.decrypt({name:'AES-GCM', iv}, derivedKey, ciphertext);
       const plain = new TextDecoder().decode(decrypted);
-      $('cipherBox').innerHTML += `<div style="margin-top:8px"><strong>Bob decrypted:</strong> ${plain}</div>`; showBubble('Bob', `Decrypted: "${plain}"`);
+      $('cipherBox').innerHTML += `<div style="margin-top:8px"><strong>Receiver decrypted:</strong> ${plain}</div>`; showBubble('Receiver', `Decrypted: "${plain}"`);
     } catch(e){
       $('cipherBox').innerHTML += `<div style="margin-top:8px;color:#ffb3b3">Decryption error</div>`;
     }
@@ -668,7 +668,7 @@ $('howBtn').addEventListener('click', ()=> $('modal').style.display='flex');
 $('closeModal').addEventListener('click', ()=> $('modal').style.display='none');
 
 /* initial pickers and hint */
-buildAlicePickers(); showBubble('Alice','Drag Alice & Bob from toolbox to the canvas');
+buildSenderPickers(); showBubble('Sender','Drag Sender & Receiver from toolbox to the canvas');
 
 /* expose userMeasure for inline onclicks */
 window.userMeasure = userMeasure;
@@ -689,7 +689,7 @@ window.userMeasure = userMeasure;
   }
 </script>
 <script>
-function getAliceBitsBases() {
+function getSenderBitsBases() {
   // Returns { bits: [...], bases: [...] }
   const n = parseInt(document.getElementById('numQ').value, 10);
   let bits = [], bases = [];
@@ -700,9 +700,9 @@ function getAliceBitsBases() {
   return { bits, bases };
 }
 
-function getBobBases() {
-  // Returns array of Bob's chosen bases
-  return bobChoices.slice();
+function getReceiverBases() {
+  // Returns array of Receiver's chosen bases
+  return ReceiverChoices.slice();
 }
 
 function getEveBases(n) {
@@ -714,19 +714,19 @@ function getEveBases(n) {
 
 /*function detectTopology() {
   // Returns "exp1", "exp2", or "exp3" based on canvas connections
-  const alice = nodes.find(n => n.type === 'alice');
-  const bob = nodes.find(n => n.type === 'bob');
+  const Sender = nodes.find(n => n.type === 'Sender');
+  const Receiver = nodes.find(n => n.type === 'Receiver');
   const eve = nodes.find(n => n.type === 'eve');
-  if (!alice || !bob) return null;
+  if (!Sender || !Receiver) return null;
   const direct = cables.find(c => 
-      (c.fromId === alice.id && c.toId === bob.id) ||
-      (c.fromId === bob.id && c.toId === alice.id)
+      (c.fromId === Sender.id && c.toId === Receiver.id) ||
+      (c.fromId === Receiver.id && c.toId === Sender.id)
   );
-  // Find if Eve is present and both Alice-Eve and Eve-Bob cables exist
+  // Find if Eve is present and both Sender-Eve and Eve-Receiver cables exist
   let eveIntercepting = false;
   if (eve) {
-      const c1 = cables.find(c => (c.fromId === alice.id && c.toId === eve.id) || (c.fromId === eve.id && c.toId === alice.id));
-      const c2 = cables.find(c => (c.fromId === bob.id && c.toId === eve.id) || (c.fromId === eve.id && c.toId === bob.id));
+      const c1 = cables.find(c => (c.fromId === Sender.id && c.toId === eve.id) || (c.fromId === eve.id && c.toId === Sender.id));
+      const c2 = cables.find(c => (c.fromId === Receiver.id && c.toId === eve.id) || (c.fromId === eve.id && c.toId === Receiver.id));
       // Eve intercepts if both cables exist and the cable is red (your renderCables logic sets this)
       if (c1 && c2) {
           // Check if either cable is red (intercepting)
@@ -748,25 +748,25 @@ function getEveBases(n) {
 
 function formatResult(data, expType) {
   let html = "";
-  html += `Alice Bits: [${data.alice_bits || data.agoodbits || ""}]\n`;
-  html += `Alice Bases: [${data.alice_bases || ""}]\n`;
-  html += `Bob Bases:   [${data.bob_bases || ""}]\n`;
+  html += `Sender Bits: [${data.Sender_bits || data.agoodbits || ""}]\n`;
+  html += `Sender Bases: [${data.Sender_bases || ""}]\n`;
+  html += `Receiver Bases:   [${data.Receiver_bases || ""}]\n`;
   if (expType === "exp3") html += `Eve Bases:   [${data.eve_bases || ""}]\n`;
   html += `\nFidelity: ${(data.fidelity * 100).toFixed(2)}%\nLoss: ${(data.loss * 100).toFixed(2)}%\n`;
   if (data.counts) html += `\nMeasurement Counts:\n${JSON.stringify(data.counts, null, 2)}\n`;
-  html += `\nSifted Key (Alice): [${data.agoodbits || ""}]\nSifted Key (Bob):   [${data.bgoodbits || ""}]\n`;
+  html += `\nSifted Key (Sender): [${data.agoodbits || ""}]\nSifted Key (Receiver):   [${data.bgoodbits || ""}]\n`;
   return html;
 }
 function detectExperimentType(){
-  const alice = nodes.find(n => n.type === 'alice');
-  const bob   = nodes.find(n => n.type === 'bob');
+  const Sender = nodes.find(n => n.type === 'Sender');
+  const Receiver   = nodes.find(n => n.type === 'Receiver');
   const eve   = nodes.find(n => n.type === 'eve');
-  if (!alice || !bob) return null;
+  if (!Sender || !Receiver) return null;
 
-  // Direct cable between Alice and Bob
+  // Direct cable between Sender and Receiver
   const directCable = cables.find(c =>
-    (c.fromId === alice.id && c.toId === bob.id) ||
-    (c.fromId === bob.id && c.toId === alice.id)
+    (c.fromId === Sender.id && c.toId === Receiver.id) ||
+    (c.fromId === Receiver.id && c.toId === Sender.id)
   );
 
   // If direct cable exists and is red, treat as Eve intercepting
@@ -774,21 +774,21 @@ function detectExperimentType(){
     return "exp3"; // Eve intercepts (single red cable)
   }
 
-  // If both Alice–Eve and Eve–Bob cables exist, treat as Eve intercepting
-  const aliceToEve = eve && cables.some(c =>
-    (c.fromId === alice.id && c.toId === eve.id) ||
-    (c.fromId === eve.id && c.toId === alice.id)
+  // If both Sender–Eve and Eve–Receiver cables exist, treat as Eve intercepting
+  const SenderToEve = eve && cables.some(c =>
+    (c.fromId === Sender.id && c.toId === eve.id) ||
+    (c.fromId === eve.id && c.toId === Sender.id)
   );
-  const eveToBob = eve && cables.some(c =>
-    (c.fromId === eve.id && c.toId === bob.id) ||
-    (c.fromId === bob.id && c.toId === eve.id)
+  const eveToReceiver = eve && cables.some(c =>
+    (c.fromId === eve.id && c.toId === Receiver.id) ||
+    (c.fromId === Receiver.id && c.toId === eve.id)
   );
-  if (eve && aliceToEve && eveToBob) {
+  if (eve && SenderToEve && eveToReceiver) {
     return "exp3";   // Eve intercepts (two-cable path)
   }
 
   if (directCable) {
-    return "exp2";   // Direct Alice↔Bob, no Eve
+    return "exp2";   // Direct Sender↔Receiver, no Eve
   }
 
    // Noisy channel fallback
@@ -796,7 +796,7 @@ function detectExperimentType(){
 document.getElementById("runExpBtn").onclick = async function() {
     const exp = detectExperimentType();
     if (!exp) {
-        document.getElementById("output").innerText = "No connection between Alice and Bob.";
+        document.getElementById("output").innerText = "No connection between Sender and Receiver.";
         return;
     }
     document.getElementById("output").innerText = "Running " + exp + "...";
@@ -808,19 +808,19 @@ document.getElementById("runExpBtn").onclick = async function() {
 // Format narration and results
 function formatNarration(data, hasEve) {
     let out = "";
-    out += "Step 1: Alice prepares random bits and bases\n";
-    out += "  Alice bits:  " + JSON.stringify(data.alice_bits) + "\n";
-    out += "  Alice bases: " + JSON.stringify(data.alice_bases) + "\n";
+    out += "Step 1: Sender prepares random bits and bases\n";
+    out += "  Sender bits:  " + JSON.stringify(data.Sender_bits) + "\n";
+    out += "  Sender bases: " + JSON.stringify(data.Sender_bases) + "\n";
     if (hasEve) {
         out += "\nStep 2: Eve intercepts and measures with random bases\n";
         out += "  (Eve's actions introduce errors)\n";
     }
-    out += "\nStep " + (hasEve ? "3" : "2") + ": Bob measures with random bases\n";
-    out += "  Bob bases:   " + JSON.stringify(data.bob_bases) + "\n";
-    out += "  Bob bits:    " + JSON.stringify(data.bob_bits) + "\n";
+    out += "\nStep " + (hasEve ? "3" : "2") + ": Receiver measures with random bases\n";
+    out += "  Receiver bases:   " + JSON.stringify(data.Receiver_bases) + "\n";
+    out += "  Receiver bits:    " + JSON.stringify(data.Receiver_bits) + "\n";
     out += "\nStep " + (hasEve ? "4" : "3") + ": Sifted keys (matching bases)\n";
-    out += "  Alice sifted: " + JSON.stringify(data.agoodbits) + "\n";
-    out += "  Bob sifted:   " + JSON.stringify(data.bgoodbits) + "\n";
+    out += "  Sender sifted: " + JSON.stringify(data.agoodbits) + "\n";
+    out += "  Receiver sifted:   " + JSON.stringify(data.bgoodbits) + "\n";
     out += "\nFidelity: " + (data.fidelity * 100).toFixed(2) + "%\n";
     out += "Loss: " + (data.loss * 100).toFixed(2) + "%\n";
     return out;
