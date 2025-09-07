@@ -130,6 +130,11 @@ h2{margin-top:0}
         <button id="howBtn" class="btn secondary" style="width:100%">How it works</button>
       </div>
 
+      <div style="margin-top:10px; display:flex; gap:8px;">
+        <button id="undoBtn" class="btn secondary" style="flex:1">Undo</button>
+        <button id="clearBtn" class="btn secondary" style="flex:1">Clear</button>
+      </div>
+
       <div class="note">
         <strong>Quick steps</strong>
         <ol style="padding-left:18px;margin-top:6px">
@@ -144,10 +149,51 @@ h2{margin-top:0}
 
   <!-- CENTER: CANVAS -->
   <div class="canvas-wrap">
-    <div class="topbar">
-      <div class="title">Packet-Tracer Style QKD — BB84</div>
-      <div class="right"><div class="small">Drag components → connect → simulate</div></div>
-    </div>
+   <div class="topbar">
+  <div class="title">Packet-Tracer Style QKD — BB84</div>
+  <div class="right" style="display:flex;align-items:center;gap:12px;">
+    <div class="small">Drag components → connect → simulate</div>
+   <style>
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f1f1f1;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+.dropdown-content a {
+  color: black;
+  padding: 8px 12px;
+  text-decoration: none;
+  display: block;
+}
+
+.dropdown-content a:hover {
+  background-color: #10b981;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+</style>
+
+<div class="dropdown">
+  <button>Features</button>
+  <div class="dropdown-content">
+    <a href="https://simulation-89hn39oimedaemad9brkbr.streamlit.app/">Simulator</a>
+    <a href="/keyrate">Key Rate vs Distance</a>
+  </div>
+</div>
+
+  </div>
+</div>
 
     <div class="stage">
       <div id="workspace" class="workspace">
@@ -672,6 +718,9 @@ buildSenderPickers(); showBubble('Sender','Drag Sender & Receiver from toolbox t
 
 /* expose userMeasure for inline onclicks */
 window.userMeasure = userMeasure;
+
+let undoStack = [];
+let redoStack = [];
 
 /* END OF SCRIPT */
 </script>
